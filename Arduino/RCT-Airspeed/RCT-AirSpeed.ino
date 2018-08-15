@@ -1,6 +1,6 @@
 /*
    -----------------------------------------------------------
-                   Jeti AirSpeed Sensor v 1.0
+                   Jeti AirSpeed Sensor v 1.1
    -----------------------------------------------------------
 
     Tero Salminen RC-Thoughts.com (c) 2017 www.rc-thoughts.com
@@ -16,7 +16,7 @@
     - Speedrange ~20 to 225km/h (~20 to 140mph)
 
   -----------------------------------------------------------
-    Shared under MIT-license by Tero Salminen (c) 2017
+    Shared under MIT-license by Tero Salminen (c) 2017-2018
   -----------------------------------------------------------
 */
 
@@ -33,12 +33,16 @@ Pressure speedSensor(sensor_pin);
 int airSpeed = 0;
 int baseval = 0;
 int units;
+static char _Speed[16];
 
 const int numReadings = 20;
 int readings[numReadings];
 int readIndex = 0;
 int total = 0;
 int average = 0;
+
+static int  _nMenu = 0;
+static bool _bSetDisplay = true;
 
 enum
 {
@@ -91,14 +95,22 @@ void loop() {
 
   jetiEx.SetSensorValue( ID_AIRSPEED, airSpeed );
 
+  if(_nMenu == 1) {
+    if (units == 1) {
+      jetiEx.SetJetiboxText( JetiExProtocol::LINE1, "Airspeed (mph)" );
+     } else {
+      jetiEx.SetJetiboxText( JetiExProtocol::LINE1, "Airspeed (km/h)" );
+     }
+     sprintf( _Speed, ": %d", airSpeed );
+     jetiEx.SetJetiboxText( JetiExProtocol::LINE2, _Speed );
+  }
+
   HandleMenu();
   jetiEx.DoJetiSend();
 }
 
 void HandleMenu()
 {
-  static int  _nMenu = 0;
-  static bool _bSetDisplay = true;
   uint8_t c = jetiEx.GetJetiboxKey();
 
   // 224 0xe0 : // RIGHT
@@ -109,7 +121,7 @@ void HandleMenu()
   //  96 0x60 : // LEFT+RIGHT
 
   // Right
-  if ( c == 0xe0 && _nMenu < 3 )
+  if ( c == 0xe0 && _nMenu < 4 )
   {
     _nMenu++;
     _bSetDisplay = true;
@@ -125,22 +137,22 @@ void HandleMenu()
   // Down
   if ( c == 0xb0 )
   {
-    if ( _nMenu == 1 ) {
+    if ( _nMenu == 2 ) {
       units = 0;
       EEPROM.write(0, units);
-      _nMenu = 4;
-      _bSetDisplay = true;
-    }
-    if ( _nMenu == 2 ) {
-      units = 1;
-      EEPROM.write(0, units);
-      _nMenu = 4;
+      _nMenu = 5;
       _bSetDisplay = true;
     }
     if ( _nMenu == 3 ) {
+      units = 1;
+      EEPROM.write(0, units);
+      _nMenu = 5;
+      _bSetDisplay = true;
+    }
+    if ( _nMenu == 4 ) {
       units = 0;
       EEPROM.write(0, units);
-      _nMenu = 4;
+      _nMenu = 5;
       _bSetDisplay = true;
     }
   }
@@ -156,26 +168,36 @@ void HandleMenu()
       _bSetDisplay = false;
       break;
     case 1:
+      if (units == 1) {
+       jetiEx.SetJetiboxText( JetiExProtocol::LINE1, "Airspeed (mph)" );
+      } else {
+       jetiEx.SetJetiboxText( JetiExProtocol::LINE1, "Airspeed (km/h)" );
+      }
+      sprintf( _Speed, ": %d", airSpeed );
+      jetiEx.SetJetiboxText( JetiExProtocol::LINE2, _Speed );
+      _bSetDisplay = false;
+      break;
+    case 2:
       jetiEx.SetJetiboxText( JetiExProtocol::LINE1, "  Unit: km/h" );
       jetiEx.SetJetiboxText( JetiExProtocol::LINE2, "  Store: DOWN" );
       _bSetDisplay = false;
       break;
-    case 2:
+    case 3:
       jetiEx.SetJetiboxText( JetiExProtocol::LINE1, "  Unit: mph" );
       jetiEx.SetJetiboxText( JetiExProtocol::LINE2, "  Store: DOWN" );
       _bSetDisplay = false;
       break;
-    case 3:
+    case 4:
       jetiEx.SetJetiboxText( JetiExProtocol::LINE1, " Reset defaults" );
       jetiEx.SetJetiboxText( JetiExProtocol::LINE2, "  Store: DOWN" );
       _bSetDisplay = false;
       break;
-    case 4:
+    case 5:
       jetiEx.SetJetiboxText( JetiExProtocol::LINE1, "Settings stored!" );
       jetiEx.SetJetiboxText( JetiExProtocol::LINE2, " Search sensors!" );
       _bSetDisplay = false;
       break;
-      if (_nMenu == 4) {
+      if (_nMenu == 5) {
         delay(1500);
         _nMenu = 0;
         _bSetDisplay = true;
